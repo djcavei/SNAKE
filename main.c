@@ -8,30 +8,31 @@
 #define SNAKELEN snake->length
 #define HEAD snake->position[0]
 
-int DIRECTION;
-int ROW;
+int DIRECTION; /*cambia a seconda della pressione di wasd memorizzando un intero (1 2 3 4 a seconda della direzione)*/
+int ROW; /*All'avvio del gioco chiede quante righe e colonne lo vuoi grande*/
 int COLUMN;
 const RIGHT = 1;
 const DOWN = 2;
 const LEFT = 3;
 const UP = 4;
-int speed;
-int food_coordinate;
-int score;
-int esc = 0;
+int speed; /*questo valore va nella funzione sleep e diminuisce ogni mangiata*/
+int food_coordinate; /*un intero che indica la casella del cibo, inizalmente a 20 e poi random con % area*/
+int score; /*punteggio*/
+int esc = 0; /*condizione stupida, bastava mettere while 1*/
+int max_score = 0; /*max score, memorizzato sul txt*/
 
-typedef struct position {
+typedef struct position { /*memorizza 3 interi: coordinate dei pezzi dello snake e la direzione in cui sta andando*/
     int r;
     int c;
     int direction;
 } position_t;
 
-typedef struct body {
+typedef struct body { /*il corpo dello snake, tiene informazioni sulla sua lunghezza e ogni pezzo punta a position_t per le coordinate e direzione*/
     position_t *position;
     int length;
 } body_t;
 
-void snake_init(body_t *snake) {
+void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 tail) di lunghezza 3 e direzione right*/
     SNAKELEN = 3;
     snake->position = (position_t*)malloc(SNAKELEN * sizeof(position_t));
     DIRECTION = RIGHT;
@@ -46,7 +47,7 @@ void snake_init(body_t *snake) {
     snake->position[2].direction = DIRECTION;
 }
 
-void field_p(const *field, int r, int c) {
+void field_p(const *field, int r, int c) { /*una funzione semplicissima, vede l'intero che popola il punto nella matrice bidimensionale e printa il simbolo corrispondente*/
     if (field[r * COLUMN + c] == 1 || field[r * COLUMN + c] == 3) {
         printf("-");
     } else if (field[r * COLUMN + c] == 2 || field[r * COLUMN + c] == 4) {
@@ -64,24 +65,24 @@ void field_p(const *field, int r, int c) {
     } else printf(" ");
 }
 
-void snake_to_field(int *field, body_t *snake) {
+void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la matrice bidimensionale e poi setta a 10 la cella del food, a DIRECTION+4 per la head e con un ciclo for lungo come il corpo restante setta la cella di field del valore della direzione che ha ogni pezzo*/
     int i, r, c;
     for (r = 0; r < ROW; r++) {
         for (c = 0; c < COLUMN; c++) {
-            field[r * COLUMN + c] = 0;
+            field[r * COLUMN + c] = 0; /*tutta la matrice a 0*/
         }
     }
-    field[food_coordinate] = 10;
+    field[food_coordinate] = 10; /*il cibo che è random settato a 10*/
     field[HEAD.r * COLUMN + HEAD.c] = DIRECTION + 4;
     for (i = 1; i < SNAKELEN; i++) {
-        field[snake->position[i].r * COLUMN + snake->position[i].c] = snake->position[i].direction;
+        field[snake->position[i].r * COLUMN + snake->position[i].c] = snake->position[i].direction; /*ogni pezzo del corpo setta la matrice del valore corrispondente alla direzione che verrà ogni mossa ereditato*/
     }
 }
 
 void move(int *field, body_t *snake) {
     int r, c, i;
-    snake_to_field(field, snake);
-    printf("SCORE: %d\n ", score);
+    snake_to_field(field, snake); /*assegna valori alla matrice sulla base della direzione del pezzo del corpo*/
+    printf("SCORE: %d     MAX_SCORE: %d\n ", score, max_score);
     for (i = 0; i < COLUMN; i++) {
         printf("_");
     }
@@ -89,7 +90,7 @@ void move(int *field, body_t *snake) {
         printf("\n");
         printf("|");
         for (c = 0; c < COLUMN; c++) {
-            field_p(field, r, c);
+            field_p(field, r, c); /*printata effettiva*/
         }
         printf("|");
     }
@@ -99,9 +100,9 @@ void move(int *field, body_t *snake) {
     }
 }
 
-void update_head(body_t *snake, int dir) {
+void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corpo[1] assegna il nuovo valore alla testa*/
     if (dir == RIGHT) {
-        HEAD.c += 1;
+        HEAD.c += 1; /*se la direzione è right ovviamente la testa in questa mossa andrà nella colonna +1 e cosi via*/
         if (HEAD.c == COLUMN) { /*TODO FARE UN CALCOLO PIU SENSATO*/
             HEAD.c = 0;
         }
@@ -127,15 +128,15 @@ void update_head(body_t *snake, int dir) {
     HEAD.direction = DIRECTION + 4;
 }
 
-void food_new(int *food_coor, const *field) {
+void food_new(int *food_coor, const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
     int random = rand() % (ROW*COLUMN)-1;
     while(field[random] != 0) {
         random = rand() % (ROW*COLUMN)-1;
     }
-    *food_coor = random;
+    *food_coor = random; /*dice che non è usato ma invece si TODO OCCHIO*/
 }
 
-int food_check(int *food_coor, body_t *snake, int *field) {
+int food_check(int *food_coor, body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
     if (HEAD.r * COLUMN + HEAD.c == food_coordinate) {
         food_new(food_coor, field);
         return 1;
@@ -143,15 +144,15 @@ int food_check(int *food_coor, body_t *snake, int *field) {
     else return 0;
 }
 
-void increase_snake(body_t *snake) {
+void increase_snake(body_t *snake) { /*se mangi realloca la memoria grande len+1*/
     SNAKELEN += 1;
-    snake->position = realloc(snake->position, SNAKELEN*sizeof(position_t));
+    snake->position = realloc(snake->position, SNAKELEN*sizeof(position_t)); /*assegna al nuovo culo il valore del vecchio culo*/
     snake->position[SNAKELEN - 1].r = snake->position[SNAKELEN - 2].r;
     snake->position[SNAKELEN - 1].c = snake->position[SNAKELEN - 2].c;
     snake->position[SNAKELEN - 1].direction = snake->position[SNAKELEN - 2].direction;
 }
 
-void updating(body_t *snake) {
+void updating(body_t *snake) { /*dopo ogni move updata la composizione scalando direzioni e coordinate dalla coda alla posizione 1 poi in una funzione a parte corpo[0] viene updatato e la direzione corpo[1] eredita la testa-4*/
     int i;
     for (i = SNAKELEN - 1; i > 1; i--) {
         snake->position[i].r = snake->position[i - 1].r;
@@ -164,7 +165,7 @@ void updating(body_t *snake) {
     snake->position[i].direction = snake->position[i - 1].direction - 4;
 }
 
-int lost(position_t head, position_t *tail, int len) {
+int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le stesse coordinate del corpo ricorsivamente*/
     if (len == 0) {
         return 1;
     }
@@ -177,8 +178,9 @@ int lost(position_t head, position_t *tail, int len) {
 }
 
 int main() {
+    FILE *punteggio;
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
-    scanf("%d %d", &ROW, &COLUMN);
+    scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
     while (!esc) {
         body_t *snake = malloc(sizeof(body_t));
         char quit = 'x';
@@ -189,6 +191,11 @@ int main() {
         food_coordinate = 20;
         score = 0;
         speed = 250;
+        punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/
+        if (punteggio) {
+            fscanf(punteggio, "%d", &max_score);
+        }
+        fclose(punteggio);
         while (lost(HEAD, &snake->position[1], SNAKELEN - 1)) {
             Sleep(speed); /*incluso in windows.h*/
             if (kbhit()) {
@@ -235,6 +242,12 @@ int main() {
         }
         system("cls");
         printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);
+        if (score > max_score) {
+            max_score = score;
+            punteggio = fopen("max_score.txt", "w+");
+            fprintf(punteggio, "%d", max_score);
+            fclose(punteggio);
+        }
         printf("Press q to quit or any key to continue\n");
         free(snake->position);
         free(snake);

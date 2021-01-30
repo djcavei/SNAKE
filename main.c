@@ -33,7 +33,8 @@ int max_score = 0; /*max score, memorizzato sul txt*/
 void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 tail) di lunghezza 3 e direzione right*/
     SNAKELEN = 3;
     snake->position = (position_t*)malloc(SNAKELEN * sizeof(position_t));
-    DIRECTION = RIGHT;
+    DIRECTION = (rand() % 4);
+    getchar();
     HEAD.r = 5;
     HEAD.c = 5;
     HEAD.direction = DIRECTION+4;
@@ -127,12 +128,12 @@ void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corp
 }
 
 void food_new(const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
-food_coordinate.r = rand() % ROW;
-food_coordinate.c = rand() % COLUMN;
-while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
-food_coordinate.r = rand() % ROW;
-food_coordinate.c = rand() % COLUMN;
-}
+    food_coordinate.r = rand() % ROW;
+    food_coordinate.c = rand() % COLUMN;
+        while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
+            food_coordinate.r = rand() % ROW;
+            food_coordinate.c = rand() % COLUMN;
+        }
 }
 
 int food_check(body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
@@ -176,6 +177,67 @@ int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le 
     return lost(head, tail + 1, len - 1);
 }
 
+
+
+
+int head_to_down(const *field, body_t *snake) {
+    int j;
+    for (j = 1; j < ROW; j++) {
+        if (field[(((HEAD.r + 1) % ROW) * COLUMN + HEAD.c)] == 0) {
+            if (field[(((HEAD.r + 1) % ROW) * COLUMN + HEAD.c)] == food_coordinate.r * COLUMN + HEAD.c) {
+                return DOWN;
+            }
+        }
+    }
+}
+
+int food_to_down(const *field, body_t *snake) {
+    int j;
+    for (j = 1; j < ROW; j++) {
+        if (field[((food_coordinate.r + j) % ROW) * COLUMN + HEAD.c] == 0) {
+        }
+        else if (field[((food_coordinate.r + j) % ROW) * COLUMN + HEAD.c] >= 5) {
+            return UP;
+        }
+        else return head_to_down(field, snake);
+    }
+}
+
+int food_to_right(const *field, body_t *snake) {
+    int i;
+    for (i = 1; i < COLUMN; i++) {
+        if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] == 0) {
+            if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] == food_coordinate.r * COLUMN + HEAD.c) {
+                return food_to_down(field, snake);
+            }
+        }
+        else if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] >= 5) {
+            return LEFT;
+        }
+        else return 0;
+    }
+}
+
+int cross_src(int *field, body_t *snake) {
+    if (food_coordinate.r * COLUMN + HEAD.c == 0) {
+        food_to_right(field, snake);
+    }
+}
+
+int autoplay(int *field, body_t *snake) {
+    cross_src(field, snake);
+}
+
+
+
+
+
+
+
+
+
+
+
 int main() {
     FILE *punteggio;
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
@@ -188,14 +250,14 @@ int main() {
         char control = 'x';
         int game_mode;
         snake_init(snake);
-        food_coordinate.r = 0;
-        food_coordinate.c = 0;
+        food_coordinate.r = (rand() % ROW);
+        food_coordinate.c = (rand() % COLUMN);
         score = 0;
         speed = 250;
         printf("Game mode: 1 autoplay, 2 humanplay");
-        getchar();
         scanf("%d", &game_mode);
-        punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/
+        getchar();
+        punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/ /*TODO RISOLVI PROBLEMI REPLAY SE SCHIACCI TANTI TASTI solito scanf di merda*/
         if (punteggio) {
             fscanf(punteggio, "%d", &max_score);
         }
@@ -246,7 +308,7 @@ int main() {
         }
         while (game_mode == 1) {
             move(*field, snake);
-            /*autoplay(*field, snake);*/
+            autoplay(*field, snake);
             updating(snake);
         }
         system("cls");

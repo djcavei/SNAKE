@@ -2,7 +2,33 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include "snake.h"
+
+#define SNAKELEN snake->length
+#define HEAD snake->position[0]
+
+typedef struct position { /*memorizza 3 interi: coordinate dei pezzi dello snake e la direzione in cui sta andando*/
+    int r;
+    int c;
+    int direction;
+} position_t;
+
+typedef struct body { /*il corpo dello snake, tiene informazioni sulla sua lunghezza e ogni pezzo punta a position_t per le coordinate e direzione*/
+    position_t *position;
+    int length;
+} body_t;
+
+int DIRECTION; /*cambia a seconda della pressione di wasd memorizzando un intero (1 2 3 4 a seconda della direzione)*/
+int ROW; /*All'avvio del gioco chiede quante righe e colonne lo vuoi grande*/
+int COLUMN;
+const RIGHT = 1;
+const DOWN = 2;
+const LEFT = 3;
+const UP = 4;
+int speed; /*questo valore va nella funzione sleep e diminuisce ogni mangiata*/
+position_t food_coordinate; /*un intero che indica la casella del cibo, inizalmente a 20 e poi random con % area*/
+int score; /*punteggio*/
+int esc = 0; /*condizione stupida, bastava mettere while 1*/
+int max_score = 0; /*max score, memorizzato sul txt*/
 
 void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 tail) di lunghezza 3 e direzione right*/
     SNAKELEN = 3;
@@ -20,21 +46,21 @@ void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 
 }
 
 void field_p(const *field, int r, int c) { /*una funzione semplicissima, vede l'intero che popola il punto nella matrice bidimensionale e printa il simbolo corrispondente*/
-    if (field[r * COLUMN + c] == 1 || field[r * COLUMN + c] == 3) {
-        printf("*");
-    } else if (field[r * COLUMN + c] == 2 || field[r * COLUMN + c] == 4) {
-        printf("+");
-    } else if (field[r * COLUMN + c] == 5) {
-        printf(">");
-    } else if (field[r * COLUMN + c] == 6) {
-        printf("v");
-    } else if (field[r * COLUMN + c] == 7) {
-        printf("<");
-    } else if (field[r * COLUMN +c] == 8) {
-        printf("^");
-    } else if (field[r * COLUMN + c] == 10) {
-        printf("O");
-    } else printf(" ");
+if (field[r * COLUMN + c] == 1 || field[r * COLUMN + c] == 3) {
+printf("*");
+} else if (field[r * COLUMN + c] == 2 || field[r * COLUMN + c] == 4) {
+printf("+");
+} else if (field[r * COLUMN + c] == 5) {
+printf(">");
+} else if (field[r * COLUMN + c] == 6) {
+printf("v");
+} else if (field[r * COLUMN + c] == 7) {
+printf("<");
+} else if (field[r * COLUMN +c] == 8) {
+printf("^");
+} else if (field[r * COLUMN + c] == 10) {
+printf("O");
+} else printf(" ");
 }
 
 void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la matrice bidimensionale e poi setta a 10 la cella del food, a DIRECTION+4 per la head e con un ciclo for lungo come il corpo restante setta la cella di field del valore della direzione che ha ogni pezzo*/
@@ -101,12 +127,12 @@ void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corp
 }
 
 void food_new(const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
-    food_coordinate.r = rand() % ROW;
-    food_coordinate.c = rand() % COLUMN;
-    while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
-        food_coordinate.r = rand() % ROW;
-        food_coordinate.c = rand() % COLUMN;
-    }
+food_coordinate.r = rand() % ROW;
+food_coordinate.c = rand() % COLUMN;
+while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
+food_coordinate.r = rand() % ROW;
+food_coordinate.c = rand() % COLUMN;
+}
 }
 
 int food_check(body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
@@ -162,11 +188,12 @@ int main() {
         char control = 'x';
         int game_mode;
         snake_init(snake);
-        food_coordinate.r = rand() % ROW;
-        food_coordinate.c = rand() % COLUMN;
+        food_coordinate.r = 0;
+        food_coordinate.c = 0;
         score = 0;
         speed = 250;
         printf("Game mode: 1 autoplay, 2 humanplay");
+        getchar();
         scanf("%d", &game_mode);
         punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/
         if (punteggio) {
@@ -219,7 +246,7 @@ int main() {
         }
         while (game_mode == 1) {
             move(*field, snake);
-            autoplay(*field, snake);
+            /*autoplay(*field, snake);*/
             updating(snake);
         }
         system("cls");

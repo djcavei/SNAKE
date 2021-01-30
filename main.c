@@ -2,35 +2,7 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <windows.h>
-
-/*#define COLUMN 20
-#define ROW 10*/
-#define SNAKELEN snake->length
-#define HEAD snake->position[0]
-
-int DIRECTION; /*cambia a seconda della pressione di wasd memorizzando un intero (1 2 3 4 a seconda della direzione)*/
-int ROW; /*All'avvio del gioco chiede quante righe e colonne lo vuoi grande*/
-int COLUMN;
-const RIGHT = 1;
-const DOWN = 2;
-const LEFT = 3;
-const UP = 4;
-int speed; /*questo valore va nella funzione sleep e diminuisce ogni mangiata*/
-int food_coordinate; /*un intero che indica la casella del cibo, inizalmente a 20 e poi random con % area*/
-int score; /*punteggio*/
-int esc = 0; /*condizione stupida, bastava mettere while 1*/
-int max_score = 0; /*max score, memorizzato sul txt*/
-
-typedef struct position { /*memorizza 3 interi: coordinate dei pezzi dello snake e la direzione in cui sta andando*/
-    int r;
-    int c;
-    int direction;
-} position_t;
-
-typedef struct body { /*il corpo dello snake, tiene informazioni sulla sua lunghezza e ogni pezzo punta a position_t per le coordinate e direzione*/
-    position_t *position;
-    int length;
-} body_t;
+#include "snake.h"
 
 void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 tail) di lunghezza 3 e direzione right*/
     SNAKELEN = 3;
@@ -49,9 +21,9 @@ void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 
 
 void field_p(const *field, int r, int c) { /*una funzione semplicissima, vede l'intero che popola il punto nella matrice bidimensionale e printa il simbolo corrispondente*/
     if (field[r * COLUMN + c] == 1 || field[r * COLUMN + c] == 3) {
-        printf("-");
+        printf("*");
     } else if (field[r * COLUMN + c] == 2 || field[r * COLUMN + c] == 4) {
-        printf("|");
+        printf("+");
     } else if (field[r * COLUMN + c] == 5) {
         printf(">");
     } else if (field[r * COLUMN + c] == 6) {
@@ -72,7 +44,7 @@ void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la m
             field[r * COLUMN + c] = 0; /*tutta la matrice a 0*/
         }
     }
-    field[food_coordinate] = 10; /*il cibo che è random settato a 10*/
+    field[food_coordinate.r * COLUMN + food_coordinate.c] = 10; /*il cibo che è random settato a 10*/
     field[HEAD.r * COLUMN + HEAD.c] = DIRECTION + 4;
     for (i = 1; i < SNAKELEN; i++) {
         field[snake->position[i].r * COLUMN + snake->position[i].c] = snake->position[i].direction; /*ogni pezzo del corpo setta la matrice del valore corrispondente alla direzione che verrà ogni mossa ereditato*/
@@ -128,17 +100,18 @@ void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corp
     HEAD.direction = DIRECTION + 4;
 }
 
-void food_new(int *food_coor, const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
-    int random = rand() % (ROW*COLUMN)-1;
-    while(field[random] != 0) {
-        random = rand() % (ROW*COLUMN)-1;
+void food_new(const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
+    food_coordinate.r = rand() % ROW;
+    food_coordinate.c = rand() % COLUMN;
+    while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
+        food_coordinate.r = rand() % ROW;
+        food_coordinate.c = rand() % COLUMN;
     }
-    *food_coor = random; /*dice che non è usato ma invece si TODO OCCHIO*/
 }
 
-int food_check(int *food_coor, body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
-    if (HEAD.r * COLUMN + HEAD.c == food_coordinate) {
-        food_new(food_coor, field);
+int food_check(body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
+    if (HEAD.r * COLUMN + HEAD.c == food_coordinate.r * COLUMN + food_coordinate.c) {
+        food_new(field);
         return 1;
     }
     else return 0;
@@ -187,16 +160,20 @@ int main() {
         int field[ROW][COLUMN];
         float multiplier = 1.0;
         char control = 'x';
+        int game_mode;
         snake_init(snake);
-        food_coordinate = 20;
+        food_coordinate.r = rand() % ROW;
+        food_coordinate.c = rand() % COLUMN;
         score = 0;
         speed = 250;
+        printf("Game mode: 1 autoplay, 2 humanplay");
+        scanf("%d", &game_mode);
         punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/
         if (punteggio) {
             fscanf(punteggio, "%d", &max_score);
         }
         fclose(punteggio);
-        while (lost(HEAD, &snake->position[1], SNAKELEN - 1)) {
+        while (game_mode == 2 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) {
             Sleep(speed); /*incluso in windows.h*/
             if (kbhit()) {
                 control = getch();
@@ -231,7 +208,7 @@ int main() {
             move(*field, snake);
             updating(snake);
             /*end_game(snake);*/
-            if (food_check(&food_coordinate, snake, *field)) {
+            if (food_check(snake, *field)) {
                 if (speed > 15) {
                     speed -= 15;
                 } else if (speed==10) speed -= 3; /*TODO CALCOLO CHE APPROSSIMI A 0 MA MAI CI ARRIVI*/
@@ -239,6 +216,11 @@ int main() {
                 score += 10 * multiplier;
                 multiplier += 0.15;
             }
+        }
+        while (game_mode == 1) {
+            move(*field, snake);
+            autoplay(*field, snake);
+            updating(snake);
         }
         system("cls");
         printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);
@@ -248,8 +230,8 @@ int main() {
             fprintf(punteggio, "%d", max_score);
             fclose(punteggio);
         }
-        printf("Press q to quit or any key to continue\n");
-        free(snake->position);
+        printf("Press q to quit or any key to continue\n"); /*TODO GRAFICA E AUTOGIOCO*/
+        free(snake->position);                                      /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
         free(snake);
         while (!kbhit()) {
             quit = getch();

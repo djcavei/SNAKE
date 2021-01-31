@@ -5,6 +5,26 @@
 
 #define SNAKELEN snake->length
 #define HEAD snake->position[0]
+#define X1 food_coordinate.r * COLUMN + HEAD.c
+#define X1_RIGHT food_coordinate.r * COLUMN + ((HEAD.c + i) % COLUMN)
+#define X1_DOWN ((food_coordinate.r + i) % ROW) * COLUMN + HEAD.c
+#define X2 HEAD.r * COLUMN + food_coordinate.c
+#define X2_RIGHT HEAD.r * COLUMN + ((food_coordinate.c + i) % COLUMN)
+#define X2_DOWN ((HEAD.r + i) % ROW) * COLUMN + food_coordinate.c
+#define HEAD_RIGHT HEAD.r * COLUMN + ((HEAD.c + i) % COLUMN)
+#define HEAD_DOWN ((HEAD.r + i) % ROW) * COLUMN + HEAD.c
+#define FOOD food_coordinate.r * COLUMN + food_coordinate.c
+#define FOOD_RIGHT food_coordinate.r * COLUMN + ((food_coordinate.c + i) % COLUMN)
+#define FOOD_DOWN ((food_coordinate.r + i) % ROW) * COLUMN + food_coordinate.c
+
+#define FOOD_ROW food_coordinate.r
+#define FOOD_COLUMN food_coordinate.c
+#define HEAD_ROW HEAD.r
+#define HEAD_COLUMN HEAD.c
+#define X1_ROW food_coordinate.r
+#define X1_COLUMN HEAD.c
+#define X2_ROW HEAD.r
+#define X2_COLUMN food_coordinate.c
 
 typedef struct position { /*memorizza 3 interi: coordinate dei pezzi dello snake e la direzione in cui sta andando*/
     int r;
@@ -33,16 +53,16 @@ int max_score = 0; /*max score, memorizzato sul txt*/
 void snake_init(body_t *snake) { /*inizializza lo snake con 3 pezzi (1 head e 2 tail) di lunghezza 3 e direzione right*/
     SNAKELEN = 3;
     snake->position = (position_t*)malloc(SNAKELEN * sizeof(position_t));
-    DIRECTION = (rand() % 4);
-    getchar();
-    HEAD.r = 5;
-    HEAD.c = 5;
+    DIRECTION = LEFT;
+    /*getchar();*/
+    HEAD.r = (rand() % ROW);
+    HEAD.c = (rand() % COLUMN);
     HEAD.direction = DIRECTION+4;
-    snake->position[1].r = 5;
-    snake->position[1].c = 4;
+    snake->position[1].r = HEAD.r;
+    snake->position[1].c = (HEAD.c + 1) % COLUMN;
     snake->position[1].direction = DIRECTION;
-    snake->position[2].r = 5;
-    snake->position[2].c = 3;
+    snake->position[2].r = HEAD.r;
+    snake->position[2].c = (HEAD.c + 2) % COLUMN;
     snake->position[2].direction = DIRECTION;
 }
 
@@ -180,47 +200,61 @@ int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le 
 
 
 
-int head_to_down(const *field, body_t *snake) {
-    int j;
-    for (j = 1; j < ROW; j++) {
-        if (field[(((HEAD.r + 1) % ROW) * COLUMN + HEAD.c)] == 0) {
-            if (field[(((HEAD.r + 1) % ROW) * COLUMN + HEAD.c)] == food_coordinate.r * COLUMN + HEAD.c) {
-                return DOWN;
+
+
+
+
+
+int src_down(const *field, int r, int c, int X) {
+    int i, occ = 0;
+    for (i = 1; i < ROW; i++) {
+        if (field[(((r + i) % ROW) * COLUMN + c)] == 0) {
+            occ++;
+            if ((((r + i) % ROW) * COLUMN + c) == X) {
+                return occ;
             }
-        }
+        } else return 0;
     }
 }
 
-int food_to_down(const *field, body_t *snake) {
-    int j;
-    for (j = 1; j < ROW; j++) {
-        if (field[((food_coordinate.r + j) % ROW) * COLUMN + HEAD.c] == 0) {
-        }
-        else if (field[((food_coordinate.r + j) % ROW) * COLUMN + HEAD.c] >= 5) {
-            return UP;
-        }
-        else return head_to_down(field, snake);
-    }
-}
-
-int food_to_right(const *field, body_t *snake) {
-    int i;
+int src_right(const *field, int r, int c, int X) {
+    int i, occ = 0;
     for (i = 1; i < COLUMN; i++) {
-        if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] == 0) {
-            if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] == food_coordinate.r * COLUMN + HEAD.c) {
-                return food_to_down(field, snake);
+        if (field[r * COLUMN + ((c + i) % COLUMN)] == 0) {
+            occ++;
+            if (r * COLUMN + ((c + i) % COLUMN) == X) {
+                return occ;
             }
-        }
-        else if (field[food_coordinate.r * COLUMN + (food_coordinate.c + i) % COLUMN] >= 5) {
-            return LEFT;
-        }
-        else return 0;
+        } else return 0;
     }
 }
 
-int cross_src(int *field, body_t *snake) {
-    if (food_coordinate.r * COLUMN + HEAD.c == 0) {
-        food_to_right(field, snake);
+void steps_init(int *steps) {
+    steps = (int*)malloc(4 * sizeof(int));
+    int i;
+    for (i = 0; i < 4; i++) {
+        steps[i] = 0;
+    }
+}
+
+/*TODO OCCHIO OCCHIO OCCHIO, SE TROVA LA TESTA CHE FAI???*/
+int *cross_src(const *field, body_t *snake) { /*formato dell'array [direction, passi, direction, passi]*/
+    int *steps;
+    int F_R, F_D, H_R, H_D, X1_D, X1_R, X2_D, X2_R;
+    steps_init(steps);
+    if (field[X1] == 0 || field[X2] == 0) {
+        F_R = src_right(field, FOOD_ROW, FOOD_COLUMN, X1);
+        H_R = src_right(field, HEAD_ROW, HEAD_COLUMN, X1);
+        X1_R = src_right(field, X1_ROW, X1_COLUMN, X1);
+        F_D = src_down(field, FOOD_ROW, FOOD_COLUMN, X1);
+        H_D = src_down(field, HEAD_ROW, HEAD_COLUMN, X1);
+        X1_D = src_down(field, X1_ROW, X1_COLUMN, X1);
+    }
+    if (field[X1] == 0) {
+        if (F_R && X1_D) {
+            steps[0] = UP;
+            steps[1] = X1_D;
+        }
     }
 }
 
@@ -249,6 +283,7 @@ int main() {
         float multiplier = 1.0;
         char control = 'x';
         int game_mode;
+        game_mode = 0;
         snake_init(snake);
         food_coordinate.r = (rand() % ROW);
         food_coordinate.c = (rand() % COLUMN);
@@ -256,7 +291,6 @@ int main() {
         speed = 250;
         printf("Game mode: 1 autoplay, 2 humanplay");
         scanf("%d", &game_mode);
-        getchar();
         punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/ /*TODO RISOLVI PROBLEMI REPLAY SE SCHIACCI TANTI TASTI solito scanf di merda*/
         if (punteggio) {
             fscanf(punteggio, "%d", &max_score);
@@ -306,7 +340,7 @@ int main() {
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1) {
+        while (game_mode == 1) { /*AUTOPLAY*/
             move(*field, snake);
             autoplay(*field, snake);
             updating(snake);

@@ -7,17 +7,7 @@
 #define SNAKELEN snake->length
 #define HEAD snake->position[0]
 #define X1 (food_coordinate.r * COLUMN + HEAD.c)
-#define X1_RIGHT (food_coordinate.r * COLUMN + ((HEAD.c + i) % COLUMN))
-#define X1_DOWN (((food_coordinate.r + i) % ROW) * COLUMN + HEAD.c)
 #define X2 (HEAD.r * COLUMN + food_coordinate.c)
-#define X2_RIGHT (HEAD.r * COLUMN + ((food_coordinate.c + i) % COLUMN))
-#define X2_DOWN (((HEAD.r + i) % ROW) * COLUMN + food_coordinate.c)
-#define HEAD_RIGHT (HEAD.r * COLUMN + ((HEAD.c + i) % COLUMN))
-#define HEAD_DOWN (((HEAD.r + i) % ROW) * COLUMN + HEAD.c)
-#define FOOD (food_coordinate.r * COLUMN + food_coordinate.c)
-#define FOOD_RIGHT (food_coordinate.r * COLUMN + ((food_coordinate.c + i) % COLUMN))
-#define FOOD_DOWN (((food_coordinate.r + i) % ROW) * COLUMN + food_coordinate.c)
-
 #define FOOD_ROW food_coordinate.r
 #define FOOD_COLUMN food_coordinate.c
 #define HEAD_ROW HEAD.r
@@ -345,6 +335,113 @@ int *autoplay(int *field, body_t *snake) {
     return buba;
 }
 
+int scan_up(body_t *snake, const *field) {
+    int i;
+    int count = 0;
+    for (i = HEAD.r - 1; i >= 0; i--) {
+        if(field[i * COLUMN + HEAD.c] == 0) {
+            count++;
+        }
+        else if (field[i * COLUMN + HEAD.c] == 10) {
+            count += 1000;
+            return count;
+        }
+        else return count;
+    }
+    return count;
+}
+
+int scan_down(body_t *snake, const *field) {
+    int i;
+    int count = 0;
+    for (i = HEAD.r + 1; i < ROW; i++) {
+        if(field[((i * COLUMN) /*% ROW*/) + HEAD.c] == 0) {
+            count++;
+        }
+        else if (field[((i * COLUMN) /*% ROW*/) + HEAD.c] == 10) {
+            count += 1000;
+            return count;
+        }
+        else return count;
+    }
+    return count;
+}
+
+int scan_right(body_t *snake, const *field) {
+    int i;
+    int count = 0;
+    for (i = HEAD.c + 1; i < COLUMN; i++) {
+        if (field[HEAD.r * COLUMN + (i /*% COLUMN*/)] == 0) {
+            count++;
+        }
+        else if (field[HEAD.r * COLUMN + (i /*% COLUMN*/)] == 10) {
+            count += 1000;
+            return count;
+        }
+        else return count;
+    }
+    return count;
+}
+
+int scan_left(body_t *snake, const *field) {
+    int i;
+    int count = 0;
+    for (i = HEAD.c - 1; i >= 0; i--) {
+        if (field[HEAD.r * COLUMN - i] == 0) {
+            count++;
+        }
+        else if (field[HEAD.r * COLUMN - i] == 10) {
+            count += 1000;
+            return count;
+        }
+        else return count;
+    }
+    return count;
+}
+
+int max_scan(int up, int down, int right, int left, int *pulsar) {
+    int arr[4], i, max = 0, i_max;
+    arr[0] = up; arr[1] = down; arr[2] = right; arr[3] = left;
+    for (i = 0; i < 4; i++) {
+        if (arr[i] >= max) {
+            if (arr[i] >= 1000) {
+                pulsar[0] = 1;
+            }
+            max = arr[i];
+            i_max = i;
+        }
+    }
+    switch (i_max) {
+        case 0: {
+            return UP;
+            break;
+        }
+        case 1: {
+            return DOWN;
+            break;
+        }
+        case 2: {
+            return RIGHT;
+            break;
+        }
+        case 3: {
+            return LEFT;
+            break;
+        }
+    }
+    return DIRECTION;
+}
+
+int pulse_scan(body_t *snake, int *field, int *pulsar) {
+    int up, down, left, right;
+    pulsar[0] = 0;
+    up = scan_up(snake, field);
+    down = scan_down(snake, field);
+    right = scan_right(snake, field);
+    left = scan_left(snake, field);
+    return max_scan(up, down, right, left, pulsar);
+}
+
 int main() {
     srand(time(NULL));
     FILE *punteggio;
@@ -415,10 +512,10 @@ int main() {
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1 /*(autoplay)*/) { /*AUTOPLAY*/
-            int *moves;
+        while (game_mode == 1 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
+            int *moves = NULL;
+            int *pulsar = NULL;
             int i;
-            system("cls");
             move(*field, snake);
             moves = autoplay(*field, snake);
             if (moves) {
@@ -437,9 +534,22 @@ int main() {
                 free(moves);
                 food_check(snake, *field);
                 increase_snake(snake);
+                system("cls");
                 continue;
+            } else {
+                pulsar = (int*)malloc(sizeof(int));
+                DIRECTION = pulse_scan(snake, *field, pulsar);
+                if (pulsar[0] == 1) {
+                    while(!food_check(snake, *field)) {
+                        system("cls");
+                        updating(snake);
+                        move(*field, snake);
+                    }
+                    increase_snake(snake);
+                    system("cls");
+                }
+                updating(snake);
             }
-            updating(snake);
             if (food_check(snake, *field)) {
                 increase_snake(snake);
             }

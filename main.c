@@ -5,17 +5,17 @@
 
 #define SNAKELEN snake->length
 #define HEAD snake->position[0]
-#define X1 food_coordinate.r * COLUMN + HEAD.c
-#define X1_RIGHT food_coordinate.r * COLUMN + ((HEAD.c + i) % COLUMN)
-#define X1_DOWN ((food_coordinate.r + i) % ROW) * COLUMN + HEAD.c
-#define X2 HEAD.r * COLUMN + food_coordinate.c
-#define X2_RIGHT HEAD.r * COLUMN + ((food_coordinate.c + i) % COLUMN)
-#define X2_DOWN ((HEAD.r + i) % ROW) * COLUMN + food_coordinate.c
-#define HEAD_RIGHT HEAD.r * COLUMN + ((HEAD.c + i) % COLUMN)
-#define HEAD_DOWN ((HEAD.r + i) % ROW) * COLUMN + HEAD.c
-#define FOOD food_coordinate.r * COLUMN + food_coordinate.c
-#define FOOD_RIGHT food_coordinate.r * COLUMN + ((food_coordinate.c + i) % COLUMN)
-#define FOOD_DOWN ((food_coordinate.r + i) % ROW) * COLUMN + food_coordinate.c
+#define X1 (food_coordinate.r * COLUMN + HEAD.c)
+#define X1_RIGHT (food_coordinate.r * COLUMN + ((HEAD.c + i) % COLUMN))
+#define X1_DOWN (((food_coordinate.r + i) % ROW) * COLUMN + HEAD.c)
+#define X2 (HEAD.r * COLUMN + food_coordinate.c)
+#define X2_RIGHT (HEAD.r * COLUMN + ((food_coordinate.c + i) % COLUMN))
+#define X2_DOWN (((HEAD.r + i) % ROW) * COLUMN + food_coordinate.c)
+#define HEAD_RIGHT (HEAD.r * COLUMN + ((HEAD.c + i) % COLUMN))
+#define HEAD_DOWN (((HEAD.r + i) % ROW) * COLUMN + HEAD.c)
+#define FOOD (food_coordinate.r * COLUMN + food_coordinate.c)
+#define FOOD_RIGHT (food_coordinate.r * COLUMN + ((food_coordinate.c + i) % COLUMN))
+#define FOOD_DOWN (((food_coordinate.r + i) % ROW) * COLUMN + food_coordinate.c)
 
 #define FOOD_ROW food_coordinate.r
 #define FOOD_COLUMN food_coordinate.c
@@ -148,12 +148,12 @@ void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corp
 }
 
 void food_new(const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
-    food_coordinate.r = rand() % ROW;
-    food_coordinate.c = rand() % COLUMN;
-        while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
-            food_coordinate.r = rand() % ROW;
-            food_coordinate.c = rand() % COLUMN;
-        }
+food_coordinate.r = rand() % ROW;
+food_coordinate.c = rand() % COLUMN;
+while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
+food_coordinate.r = rand() % ROW;
+food_coordinate.c = rand() % COLUMN;
+}
 }
 
 int food_check(body_t *snake, int *field) { /*verifica che testa e cibo siano nella stessa coordinata e chiama una funzione per randomizzare la posizione del nuovo cibo*/
@@ -199,7 +199,7 @@ int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le 
 
 
 
-
+/* INIZIO AUTOPLAY*/
 
 
 
@@ -213,8 +213,12 @@ int src_down(const *field, int r, int c, int X) {
             if ((((r + i) % ROW) * COLUMN + c) == X) {
                 return occ;
             }
+        } else if (field[(((r + i) % ROW) * COLUMN + c)] >= 5) {
+            occ++;
+            return occ;
         } else return 0;
     }
+    return 0;
 }
 
 int src_right(const *field, int r, int c, int X) {
@@ -225,55 +229,124 @@ int src_right(const *field, int r, int c, int X) {
             if (r * COLUMN + ((c + i) % COLUMN) == X) {
                 return occ;
             }
+        } else if (field[r * COLUMN + ((c + i) % COLUMN)] >= 5) {
+            occ++;
+            return occ;
         } else return 0;
     }
+    return 0;
 }
 
-void steps_init(int *steps) {
-    steps = (int*)malloc(4 * sizeof(int));
+int *steps_init(int *steppess) {
+    int *a = malloc(4 * sizeof(int));
     int i;
     for (i = 0; i < 4; i++) {
-        steps[i] = 0;
+        a[i] = 0;
     }
+    return a;
+}
+
+int *src_minimum(int one, int two, int three, int four, int *steps, int flag) {
+    int i, i_min, min = 10000;
+    int combo[4];
+    steps[0] = one; steps[1] = two; steps[2] = three; steps[3] = four;
+    for (i = 0; i < 4; i++) {
+        if (steps[i] == 0) {
+            steps[i] = 10000;
+        }
+    }
+    combo[0] = steps[0] + steps[2]; combo[1] = steps[0] + steps[3];
+    combo[2] = steps[1] + steps[2]; combo[3] = steps[1] + steps[2];
+    for (i = 0; i < 4; i++) {
+        if (combo[i] < min) {
+            min = combo[i];
+            i_min = i;
+        } else combo[i] = 0;
+    }
+    switch (i_min) {
+        case 0: {
+            if (flag == 1) {
+                steps[0] = UP; steps[1] = one; steps[2] = LEFT; steps[3] = three;
+            } else {
+                steps[0] = LEFT; steps[1] = one; steps[2] = UP; steps[3] = three;
+            }
+            break;
+        }
+        case 1: {
+            if (flag == 1) {
+                steps[0] = UP; steps[1] = one; steps[2] = RIGHT; steps[3] = four;
+            } else {
+                steps[0] = LEFT; steps[1] = one; steps[2] = DOWN; steps[3] = four;
+            }
+            break;
+        }
+        case 2: {
+            if (flag == 1) {
+                steps[0] = DOWN; steps[1] = two; steps[2] = LEFT; steps[3] = three;
+            } else {
+                steps[0] = RIGHT; steps[1] = two; steps[2] = UP; steps[3] = three;
+            }
+            break;
+        }
+        case 3: {
+            if (flag == 1) {
+                steps[0] = DOWN; steps[1] = two; steps[2] = RIGHT; steps[3] = four;
+            } else {
+                steps[0] = RIGHT; steps[1] = two; steps[2] = DOWN; steps[3] = four;
+            }
+            break;
+        }
+    }
+    return steps;
 }
 
 /*TODO OCCHIO OCCHIO OCCHIO, SE TROVA LA TESTA CHE FAI???*/
 int *cross_src(const *field, body_t *snake) { /*formato dell'array [direction, passi, direction, passi]*/
-    int *steps;
+    int *steppess_x1 = NULL, *steppess_x2 = NULL;
     int F_R, F_D, H_R, H_D, X1_D, X1_R, X2_D, X2_R;
-    steps_init(steps);
-    if (field[X1] == 0 || field[X2] == 0) {
+    if (field[X1] == 0) {
+        steppess_x1 = steps_init(steppess_x1);
         F_R = src_right(field, FOOD_ROW, FOOD_COLUMN, X1);
-        H_R = src_right(field, HEAD_ROW, HEAD_COLUMN, X1);
         X1_R = src_right(field, X1_ROW, X1_COLUMN, X1);
-        F_D = src_down(field, FOOD_ROW, FOOD_COLUMN, X1);
         H_D = src_down(field, HEAD_ROW, HEAD_COLUMN, X1);
         X1_D = src_down(field, X1_ROW, X1_COLUMN, X1);
+        if ((X1_D || H_D) && (X1_R || F_R)) {
+            steppess_x1 = src_minimum(X1_D, H_D, F_R, X1_R, steppess_x1, 1);
+        } else free(steppess_x1);
     }
-    if (field[X1] == 0) {
-        if (F_R && X1_D) {
-            steps[0] = UP;
-            steps[1] = X1_D;
+    if (field[X2] == 0) {
+        steppess_x2 = steps_init(steppess_x2);
+        H_R = src_right(field, HEAD_ROW, HEAD_COLUMN, X2);
+        F_D = src_down(field, FOOD_ROW, FOOD_COLUMN, X2);
+        X2_D = src_down(field, X2_ROW, X2_COLUMN, X2);
+        X2_R = src_right(field, X2_ROW, X2_COLUMN, X2);
+        if ((X2_R || H_R) && (X2_D || F_D)) {
+            steppess_x2 = src_minimum(X2_R, H_R, F_D, X2_D, steppess_x2, 2);
         }
+        else free(steppess_x2);
     }
+    else {
+        return NULL;
+    }
+    if (steppess_x1 && steppess_x2) {
+        if (steppess_x1[1] + steppess_x1[3] < steppess_x2[1] + steppess_x2[3]) {
+            return steppess_x1;
+        } else return steppess_x2;
+    }
+    if (!steppess_x1) {
+        return steppess_x2;
+    } else return steppess_x1;
 }
 
-int autoplay(int *field, body_t *snake) {
-    cross_src(field, snake);
+int *autoplay(int *field, body_t *snake) {
+    int *buba;
+    buba = cross_src(field, snake);
+    return buba;
 }
-
-
-
-
-
-
-
-
-
-
 
 int main() {
     FILE *punteggio;
+    setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
     scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
     while (!esc) {
@@ -340,10 +413,34 @@ int main() {
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1) { /*AUTOPLAY*/
+        while (game_mode == 1 /*(autoplay)*/) { /*AUTOPLAY*/
+            int *moves;
+            int i;
+            system("cls");
             move(*field, snake);
-            autoplay(*field, snake);
+            moves = autoplay(*field, snake);
+            if (moves) {
+                DIRECTION = moves[0];
+                for (i = 0; i < moves[1]; i++) {
+                    system("cls");
+                    updating(snake);
+                    move(*field, snake);
+                }
+                DIRECTION = moves[2];
+                for (i = 0; i < moves[3]; i++) {
+                    system("cls");
+                    updating(snake);
+                    move(*field, snake);
+                }
+                free(moves);
+                food_check(snake, *field);
+                increase_snake(snake);
+                continue;
+            }
             updating(snake);
+            if (food_check(snake, *field)) {
+                increase_snake(snake);
+            }
         }
         system("cls");
         printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);

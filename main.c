@@ -2,6 +2,7 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <time.h>
 
 #define SNAKELEN snake->length
 #define HEAD snake->position[0]
@@ -148,11 +149,11 @@ void update_head(body_t *snake, int dir) { /*dopo aver scalato i valori del corp
 }
 
 void food_new(const *field) { /*nel main si controlla se coordinate testa e food sono uguali e si calcola random il nuovo cibo verificando che non ci sia un serpente*/
-food_coordinate.r = rand() % ROW;
-food_coordinate.c = rand() % COLUMN;
+food_coordinate.r = (rand() % ROW);
+food_coordinate.c = (rand() % COLUMN);
 while(field[food_coordinate.r * COLUMN + food_coordinate.c] != 0) {
-food_coordinate.r = rand() % ROW;
-food_coordinate.c = rand() % COLUMN;
+food_coordinate.r = (rand() % ROW);
+food_coordinate.c = (rand() % COLUMN);
 }
 }
 
@@ -345,6 +346,7 @@ int *autoplay(int *field, body_t *snake) {
 }
 
 int main() {
+    srand(time(NULL));
     FILE *punteggio;
     setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");

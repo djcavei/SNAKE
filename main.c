@@ -419,10 +419,10 @@ int scan_left(body_t *snake, const *field) {
 }
 
 int max_scan(int up, int down, int right, int left, int *pulsar) {
-    int arr[4], i, max = 0, i_max;
+    int arr[4], i, max = 0, i_max = 20; /*ipotesi bug metto a 20 i_max per caso default*/
     arr[0] = up; arr[1] = down; arr[2] = right; arr[3] = left;
     for (i = 0; i < 4; i++) {
-        if (arr[i] >= max) {
+        if (arr[i] >/*=*/ max) { /*IPOTESI BUG TOLTO >= MESSO >*/
             if (arr[i] >= 1000) {
                 pulsar[0] = 1;
             }
@@ -442,6 +442,9 @@ int max_scan(int up, int down, int right, int left, int *pulsar) {
         }
         case 3: {
             return LEFT;
+        }
+        case 20: {
+            return DIRECTION;
         }
     }
     return DIRECTION;
@@ -467,7 +470,7 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
     char control;
     int game_mode;
     FILE *punteggio;
-    /*srand(time(NULL));*/
+    srand(time(NULL));
     setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
     scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
@@ -535,7 +538,7 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1 /*&& lost(HEAD, &snake->position[1], SNAKELEN - 1)*/) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
+        while (game_mode == 1 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
             pulsar = NULL;
             moves = NULL;
             move(*field, snake);
@@ -569,6 +572,8 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                     }
                     increase_snake(snake);
                     system("cls");
+                } else {
+                    system("cls"); /*FA UN CASINO DI CALCOLI DA QUANDO HO MESSO >MIN SU MAXSCAN*/
                 }
                 free(pulsar);
                 updating(snake, *field);

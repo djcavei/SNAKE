@@ -86,6 +86,7 @@ void field_init(int *field) {
 
 void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la matrice bidimensionale e poi setta a 10 la cella del food, a DIRECTION+4 per la head e con un ciclo for lungo come il corpo restante setta la cella di field del valore della direzione che ha ogni pezzo*/
     int i;
+    int r, c;
     field[food_coordinate.r * COLUMN + food_coordinate.c] = 10; /*il cibo che è random settato a 10*/
     field[HEAD.r * COLUMN + HEAD.c] = DIRECTION + 4;
     for (i = 1; i < SNAKELEN; i++) {
@@ -169,7 +170,7 @@ void increase_snake(body_t *snake) { /*se mangi realloca la memoria grande len+1
 
 void updating(body_t *snake, int *field) { /*dopo ogni move updata la composizione scalando direzioni e coordinate dalla coda alla posizione 1 poi in una funzione a parte corpo[0] viene updatato e la direzione corpo[1] eredita la testa-4*/
     int i;
-    field[snake->position[SNAKELEN - 1].r * COLUMN + snake->position[SNAKELEN - 1].c] = 0;
+    field[snake->position[SNAKELEN - 1].r * COLUMN + snake->position[SNAKELEN - 1].c] = 0; /*setta a 0 il punto del campo della coda finale*/
     for (i = SNAKELEN - 1; i > 1; i--) {
         snake->position[i].r = snake->position[i - 1].r;
         snake->position[i].c = snake->position[i - 1].c;
@@ -250,9 +251,9 @@ int *src_minimum(int one, int two, int three, int four, int *steps, int flag) {
         }
     }
     combo[0] = steps[0] + steps[2]; combo[1] = steps[0] + steps[3];
-    combo[2] = steps[1] + steps[2]; combo[3] = steps[1] + steps[2];
+    combo[2] = steps[1] + steps[2]; combo[3] = steps[1] + steps[3];
     for (i = 0; i < 4; i++) {
-        if (combo[i] < min) {
+        if (combo[i] </*=*/ min) { /*SOSPETTO BUG HO MESSO <= AL POSTO DI <*/
             min = combo[i];
             i_min = i;
         } else combo[i] = 0;
@@ -321,9 +322,6 @@ int *cross_src(const *field, body_t *snake) { /*formato dell'array [direction, p
             steppess_x2 = src_minimum(X2_R, H_R, F_D, X2_D, steppess_x2, 2);
         }
     }
-    else {
-        return NULL;
-    }
     if (steppess_x1 && steppess_x2) {
         if (steppess_x1[1] + steppess_x1[3] < steppess_x2[1] + steppess_x2[3]) {
             free(steppess_x2);/*
@@ -334,6 +332,9 @@ int *cross_src(const *field, body_t *snake) { /*formato dell'array [direction, p
             steppess_x1 = NULL;*/
             return steppess_x2;
         }
+    }
+    if (!steppess_x1 && !steppess_x2) {
+        return NULL;
     }
     if (steppess_x1 == NULL) {
         return steppess_x2;
@@ -405,10 +406,10 @@ int scan_left(body_t *snake, const *field) {
     int i;
     int count = 0;
     for (i = HEAD.c - 1; i >= 0; i--) {
-        if (field[HEAD.r * COLUMN - i] == 0) {
+        if (field[HEAD.r * COLUMN + i] == 0) {
             count++;
         }
-        else if (field[HEAD.r * COLUMN - i] == 10) {
+        else if (field[HEAD.r * COLUMN + i] == 10) {
             count += 1000;
             return count;
         }
@@ -432,19 +433,15 @@ int max_scan(int up, int down, int right, int left, int *pulsar) {
     switch (i_max) {
         case 0: {
             return UP;
-            break;
         }
         case 1: {
             return DOWN;
-            break;
         }
         case 2: {
             return RIGHT;
-            break;
         }
         case 3: {
             return LEFT;
-            break;
         }
     }
     return DIRECTION;
@@ -470,9 +467,7 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
     char control;
     int game_mode;
     FILE *punteggio;
-/*
-    srand(time(NULL));
-*/
+    /*srand(time(NULL));*/
     setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
     scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
@@ -561,10 +556,11 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                 food_check(snake, *field);
                 increase_snake(snake);
                 system("cls");
+                free(moves);
                 continue;
             } else {
                 pulsar = (int*)malloc(sizeof(int));
-                DIRECTION = pulse_scan(snake, *field, pulsar);
+                DIRECTION = pulse_scan(snake, *field, pulsar); /*TODO PROGRAMMARE QUANDO PULSE SCAN NON DA NULLA DA MANGIARE*/
                 if (pulsar[0] == 1) {
                     while(!food_check(snake, *field)) {
                         system("cls");
@@ -574,16 +570,15 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                     increase_snake(snake);
                     system("cls");
                 }
+                free(pulsar);
                 updating(snake, *field);
             }
             if (food_check(snake, *field)) {
                 increase_snake(snake);
             }
-            free(moves);
-            free(pulsar);
         }
         /*scanf("%d", &esc);*/
-        free(snake->position);                                      /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
+        free(snake->position);           /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
         free(snake);
         system("cls");
         printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);

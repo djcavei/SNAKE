@@ -75,13 +75,17 @@ printf("O");
 } else printf(" ");
 }
 
-void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la matrice bidimensionale e poi setta a 10 la cella del food, a DIRECTION+4 per la head e con un ciclo for lungo come il corpo restante setta la cella di field del valore della direzione che ha ogni pezzo*/
-    int i, r, c;
+void field_init(int *field) {
+    int r, c;
     for (r = 0; r < ROW; r++) {
         for (c = 0; c < COLUMN; c++) {
             field[r * COLUMN + c] = 0; /*tutta la matrice a 0*/
         }
     }
+}
+
+void snake_to_field(int *field, body_t *snake) { /*inizializza a zero tutta la matrice bidimensionale e poi setta a 10 la cella del food, a DIRECTION+4 per la head e con un ciclo for lungo come il corpo restante setta la cella di field del valore della direzione che ha ogni pezzo*/
+    int i;
     field[food_coordinate.r * COLUMN + food_coordinate.c] = 10; /*il cibo che è random settato a 10*/
     field[HEAD.r * COLUMN + HEAD.c] = DIRECTION + 4;
     for (i = 1; i < SNAKELEN; i++) {
@@ -163,8 +167,9 @@ void increase_snake(body_t *snake) { /*se mangi realloca la memoria grande len+1
     snake->position[SNAKELEN - 1].direction = snake->position[SNAKELEN - 2].direction;
 }
 
-void updating(body_t *snake) { /*dopo ogni move updata la composizione scalando direzioni e coordinate dalla coda alla posizione 1 poi in una funzione a parte corpo[0] viene updatato e la direzione corpo[1] eredita la testa-4*/
+void updating(body_t *snake, int *field) { /*dopo ogni move updata la composizione scalando direzioni e coordinate dalla coda alla posizione 1 poi in una funzione a parte corpo[0] viene updatato e la direzione corpo[1] eredita la testa-4*/
     int i;
+    field[snake->position[SNAKELEN - 1].r * COLUMN + snake->position[SNAKELEN - 1].c] = 0;
     for (i = SNAKELEN - 1; i > 1; i--) {
         snake->position[i].r = snake->position[i - 1].r;
         snake->position[i].c = snake->position[i - 1].c;
@@ -181,7 +186,7 @@ int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le 
         return 1;
     }
     else if (head.r == tail->r) {
-        if (head.c == tail->c) {
+        if (head.c == tail->c) {        /*TODO, POTREBBE ESSERE LUI LO STRONZO? CARINA MA FALLA ITERATIVA VA*/
             return 0;
         }
     }
@@ -228,13 +233,11 @@ int src_right(const *field, int r, int c, int X) {
     return 0;
 }
 
-int *steps_init(int *steppess) {
-    int *a = malloc(4 * sizeof(int));
+void steps_init(int *steppess) {
     int i;
     for (i = 0; i < 4; i++) {
-        a[i] = 0;
+        steppess[i] = 0;
     }
-    return a;
 }
 
 int *src_minimum(int one, int two, int three, int four, int *steps, int flag) {
@@ -292,47 +295,62 @@ int *src_minimum(int one, int two, int three, int four, int *steps, int flag) {
 }
 
 /*TODO OCCHIO OCCHIO OCCHIO, SE TROVA LA TESTA CHE FAI???*/
+
 int *cross_src(const *field, body_t *snake) { /*formato dell'array [direction, passi, direction, passi]*/
     int *steppess_x1 = NULL, *steppess_x2 = NULL;
     int F_R, F_D, H_R, H_D, X1_D, X1_R, X2_D, X2_R;
     if (field[X1] == 0) {
-        steppess_x1 = steps_init(steppess_x1);
         F_R = src_right(field, FOOD_ROW, FOOD_COLUMN, X1);
         X1_R = src_right(field, X1_ROW, X1_COLUMN, X1);
         H_D = src_down(field, HEAD_ROW, HEAD_COLUMN, X1);
         X1_D = src_down(field, X1_ROW, X1_COLUMN, X1);
         if ((X1_D || H_D) && (X1_R || F_R)) {
+            steppess_x1 = (int*)malloc(4 * sizeof(int));
+            steps_init(steppess_x1);
             steppess_x1 = src_minimum(X1_D, H_D, F_R, X1_R, steppess_x1, 1);
-        } else free(steppess_x1);
+        }
     }
     if (field[X2] == 0) {
-        steppess_x2 = steps_init(steppess_x2);
         H_R = src_right(field, HEAD_ROW, HEAD_COLUMN, X2);
         F_D = src_down(field, FOOD_ROW, FOOD_COLUMN, X2);
         X2_D = src_down(field, X2_ROW, X2_COLUMN, X2);
         X2_R = src_right(field, X2_ROW, X2_COLUMN, X2);
         if ((X2_R || H_R) && (X2_D || F_D)) {
+            steppess_x2 = (int*)malloc(4 * sizeof(int));
+            steps_init(steppess_x2);
             steppess_x2 = src_minimum(X2_R, H_R, F_D, X2_D, steppess_x2, 2);
         }
-        else free(steppess_x2);
     }
     else {
         return NULL;
     }
     if (steppess_x1 && steppess_x2) {
         if (steppess_x1[1] + steppess_x1[3] < steppess_x2[1] + steppess_x2[3]) {
+            free(steppess_x2);/*
+            steppess_x2 = NULL;*/
             return steppess_x1;
-        } else return steppess_x2;
+        } else {
+            free(steppess_x1);/*
+            steppess_x1 = NULL;*/
+            return steppess_x2;
+        }
     }
-    if (!steppess_x1) {
+    if (steppess_x1 == NULL) {
         return steppess_x2;
-    } else return steppess_x1;
+    } else if (steppess_x2 == NULL){
+        return steppess_x1;
+    }
+    exit(EXIT_FAILURE);
 }
 
 int *autoplay(int *field, body_t *snake) {
     int *buba;
     buba = cross_src(field, snake);
-    return buba;
+    if (buba) {
+        return buba;
+    } else {
+        return NULL;
+    }
 }
 
 int scan_up(body_t *snake, const *field) {
@@ -442,20 +460,30 @@ int pulse_scan(body_t *snake, int *field, int *pulsar) {
     return max_scan(up, down, right, left, pulsar);
 }
 
-int main() {
-    srand(time(NULL));
+int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault nelle free*/
+    int *moves;
+    int *pulsar;
+    int i;
+    body_t *snake;
+    char quit;
+    float multiplier;
+    char control;
+    int game_mode;
     FILE *punteggio;
+/*
+    srand(time(NULL));
+*/
     setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
     scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
+    int field[ROW][COLUMN];
     while (!esc) {
-        body_t *snake = malloc(sizeof(body_t));
-        char quit = 'x';
-        int field[ROW][COLUMN];
-        float multiplier = 1.0;
-        char control = 'x';
-        int game_mode;
-        game_mode = 0;
+        field_init(*field);
+        control = 'x';
+        quit = 'x';
+        multiplier = 1.0;
+        snake = (body_t*)malloc(sizeof(body_t));
+        game_mode = 2;
         snake_init(snake);
         food_coordinate.r = (rand() % ROW);
         food_coordinate.c = (rand() % COLUMN);
@@ -501,7 +529,7 @@ int main() {
             }
             system("cls");
             move(*field, snake);
-            updating(snake);
+            updating(snake, *field);
             /*end_game(snake);*/
             if (food_check(snake, *field)) {
                 if (speed > 15) {
@@ -512,26 +540,24 @@ int main() {
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
-            int *moves = NULL;
-            int *pulsar = NULL;
-            int i;
+        while (game_mode == 1 /*&& lost(HEAD, &snake->position[1], SNAKELEN - 1)*/) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
+            pulsar = NULL;
+            moves = NULL;
             move(*field, snake);
             moves = autoplay(*field, snake);
             if (moves) {
                 DIRECTION = moves[0];
                 for (i = 0; i < moves[1]; i++) {
                     system("cls");
-                    updating(snake);
+                    updating(snake, *field);
                     move(*field, snake);
                 }
                 DIRECTION = moves[2];
                 for (i = 0; i < moves[3]; i++) {
                     system("cls");
-                    updating(snake);
+                    updating(snake, *field);
                     move(*field, snake);
                 }
-                free(moves);
                 food_check(snake, *field);
                 increase_snake(snake);
                 system("cls");
@@ -542,18 +568,23 @@ int main() {
                 if (pulsar[0] == 1) {
                     while(!food_check(snake, *field)) {
                         system("cls");
-                        updating(snake);
+                        updating(snake, *field);
                         move(*field, snake);
                     }
                     increase_snake(snake);
                     system("cls");
                 }
-                updating(snake);
+                updating(snake, *field);
             }
             if (food_check(snake, *field)) {
                 increase_snake(snake);
             }
+            free(moves);
+            free(pulsar);
         }
+        /*scanf("%d", &esc);*/
+        free(snake->position);                                      /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
+        free(snake);
         system("cls");
         printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);
         if (score > max_score) {
@@ -563,8 +594,6 @@ int main() {
             fclose(punteggio);
         }
         printf("Press q to quit or any key to continue\n"); /*TODO GRAFICA E AUTOGIOCO*/
-        free(snake->position);                                      /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
-        free(snake);
         while (!kbhit()) {
             quit = getch();
             if (quit == 'q' || quit == 'Q') {

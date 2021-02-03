@@ -182,7 +182,10 @@ void updating(body_t *snake, int *field) { /*dopo ogni move updata la composizio
     snake->position[i].direction = snake->position[i - 1].direction - 4;
 }
 
-int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le stesse coordinate del corpo ricorsivamente*/
+int lost(position_t head, position_t *tail, int len, int flag) { /*vede se la testa ha le stesse coordinate del corpo ricorsivamente*/
+    if (flag == 0) {
+        return 1;
+    }
     if (len == 0) {
         return 1;
     }
@@ -191,7 +194,7 @@ int lost(position_t head, position_t *tail, int len) { /*vede se la testa ha le 
             return 0;
         }
     }
-    return lost(head, tail + 1, len - 1);
+    return lost(head, tail + 1, len - 1, flag);
 }
 
 
@@ -357,7 +360,8 @@ int *autoplay(int *field, body_t *snake) {
 int scan_up(body_t *snake, const *field) {
     int i;
     int count = 0;
-    for (i = HEAD.r - 1; i >= 0; i--) {
+    for (i = HEAD.r - 1; i != HEAD.r; i--) {
+        if (i < 0) i = ROW - 1;
         if(field[i * COLUMN + HEAD.c] == 0) {
             count++;
         }
@@ -373,11 +377,11 @@ int scan_up(body_t *snake, const *field) {
 int scan_down(body_t *snake, const *field) {
     int i;
     int count = 0;
-    for (i = HEAD.r + 1; i < ROW; i++) {
-        if(field[((i * COLUMN) /*% ROW*/) + HEAD.c] == 0) {
+    for (i = HEAD.r + 1; i != HEAD.r; i++) {
+        if(field[((i  % ROW)* COLUMN) + HEAD.c] == 0) {
             count++;
         }
-        else if (field[((i * COLUMN) /*% ROW*/) + HEAD.c] == 10) {
+        else if (field[((i % ROW) * COLUMN) + HEAD.c] == 10) {
             count += 1000;
             return count;
         }
@@ -389,11 +393,11 @@ int scan_down(body_t *snake, const *field) {
 int scan_right(body_t *snake, const *field) {
     int i;
     int count = 0;
-    for (i = HEAD.c + 1; i < COLUMN; i++) {
-        if (field[HEAD.r * COLUMN + (i /*% COLUMN*/)] == 0) {
+    for (i = HEAD.c + 1; i != HEAD.c; i++) {
+        if (field[HEAD.r * COLUMN + (i % COLUMN)] == 0) {
             count++;
         }
-        else if (field[HEAD.r * COLUMN + (i /*% COLUMN*/)] == 10) {
+        else if (field[HEAD.r * COLUMN + (i % COLUMN)] == 10) {
             count += 1000;
             return count;
         }
@@ -405,7 +409,8 @@ int scan_right(body_t *snake, const *field) {
 int scan_left(body_t *snake, const *field) {
     int i;
     int count = 0;
-    for (i = HEAD.c - 1; i >= 0; i--) {
+    for (i = HEAD.c - 1; i != HEAD.c; i--) {
+        if (i < 0) i = COLUMN - 1;
         if (field[HEAD.r * COLUMN + i] == 0) {
             count++;
         }
@@ -422,10 +427,11 @@ int max_scan(int up, int down, int right, int left, int *pulsar) {
     int arr[4], i, max = 0, i_max = 20; /*ipotesi bug metto a 20 i_max per caso default*/
     arr[0] = up; arr[1] = down; arr[2] = right; arr[3] = left;
     for (i = 0; i < 4; i++) {
-        if (arr[i] >/*=*/ max) { /*IPOTESI BUG TOLTO >= MESSO >*/
-            if (arr[i] >= 1000) {
-                pulsar[0] = 1;
-            }
+        if (arr[i] >= 1000) {
+            pulsar[0] = 1;
+            arr[i] = 1000 - (arr[i] - 1000);
+        }
+        if (arr[i] >= max) { /*IPOTESI BUG TOLTO >= MESSO >*/
             max = arr[i];
             i_max = i;
         }
@@ -460,22 +466,23 @@ int pulse_scan(body_t *snake, int *field, int *pulsar) {
     return max_scan(up, down, right, left, pulsar);
 }
 
-int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault nelle free*/
+int main() {
     int *moves;
     int *pulsar;
-    int i;
+    int i, death;
     body_t *snake;
     char quit;
     float multiplier;
     char control;
     int game_mode;
     FILE *punteggio;
-    srand(time(NULL));
+    srand(time(NULL)); /*TODO METTILO*/
     setbuf(stdout, 0);
     printf("Digita grandezza campo, formato: 'righe spazio colonne'. (Max suggerito 30x60 poi vedi tu se vuoi avere una crisi epilettica): ");
     scanf("%d %d", &ROW, &COLUMN); /*scegli la grandezza del campo*/
     int field[ROW][COLUMN];
     while (!esc) {
+        death = 1;
         field_init(*field);
         control = 'x';
         quit = 'x';
@@ -489,12 +496,16 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
         speed = 250;
         printf("Game mode: 1 autoplay, 2 humanplay");
         scanf("%d", &game_mode);
+        if (game_mode == 1) {
+            printf("\nCon morte o senza morte? 1 morte, 0 senza morte");
+            scanf("%d", &death);
+        }
         punteggio = fopen("max_score.txt", "r+"); /*se c'è apre il file con max score*/ /*TODO RISOLVI PROBLEMI REPLAY SE SCHIACCI TANTI TASTI solito scanf di merda*/
         if (punteggio) {
             fscanf(punteggio, "%d", &max_score);
         }
         fclose(punteggio);
-        while (game_mode == 2 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) {
+        while (game_mode == 2 && lost(HEAD, &snake->position[1], SNAKELEN - 1, 1)) {
             Sleep(speed); /*incluso in windows.h*/
             if (kbhit()) {
                 control = getch();
@@ -538,7 +549,7 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                 multiplier += 0.15;
             }
         }
-        while (game_mode == 1 && lost(HEAD, &snake->position[1], SNAKELEN - 1)) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
+        while (game_mode == 1 && lost(HEAD, &snake->position[1], SNAKELEN - 1, death)) { /*AUTOPLAY*/ /*TODO CONTROLLA BENE IL PIU CORTO?*/
             pulsar = NULL;
             moves = NULL;
             move(*field, snake);
@@ -573,10 +584,10 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                     increase_snake(snake);
                     system("cls");
                 } else {
-                    system("cls"); /*FA UN CASINO DI CALCOLI DA QUANDO HO MESSO >MIN SU MAXSCAN*/
+                    system("cls");
+                    updating(snake, *field);
                 }
                 free(pulsar);
-                updating(snake, *field);
             }
             if (food_check(snake, *field)) {
                 increase_snake(snake);
@@ -585,8 +596,7 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
         /*scanf("%d", &esc);*/
         free(snake->position);           /*TODO INIZIALIZZA A ZERO SOLO ALL'INIZIO POI UPGRADA E BASTA*/
         free(snake);
-        system("cls");
-        printf("YOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);
+        printf("\n\nYOU LOSEEEEEE!\nYOUR SCORE IS: %d\n", score);
         if (score > max_score) {
             max_score = score;
             punteggio = fopen("max_score.txt", "w+");
@@ -600,7 +610,10 @@ int main() { /*TODO al 02 febbraio penso ci siano errori di segmentation fault n
                 system("cls");
                 return 0;
             }
-            else break;
+            else {
+                system("cls");
+                break;
+            }
         }
     }
 }
